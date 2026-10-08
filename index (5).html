@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Maangai Tap</title>
+<style>
+  :root{
+    --sun:#ffd23f; --orange:#ff8a1f; --ink:#3a1c08; --cream:#fff4d6;
+    --hole:#7a3510; --chilli:#d62828; --pop:#ffe27a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+  body{margin:0;min-height:100vh;background:var(--sun);color:var(--ink);
+    font-family:"Trebuchet MS",system-ui,sans-serif;display:flex;justify-content:center}
+  main{width:100%;max-width:420px;padding:16px;display:flex;flex-direction:column;gap:14px}
+  h1{margin:4px 0 0;font-size:36px;font-weight:900;letter-spacing:.5px;color:var(--ink)}
+  .sub{margin:0;font-size:14px;font-weight:bold}
+  .bar{display:flex;justify-content:space-between;background:var(--ink);color:var(--cream);
+    border-radius:16px;padding:10px 16px;font-size:16px;box-shadow:0 4px 0 rgba(58,28,8,.25)}
+  .bar b{font-size:24px;color:var(--sun)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+    background:var(--orange);padding:14px;border-radius:24px;box-shadow:0 6px 0 #d96d0a}
+  .hole{aspect-ratio:1;background:var(--hole);border-radius:50%;position:relative;
+    overflow:hidden;border:4px solid #ffb347;padding:0;box-shadow:inset 0 8px 12px rgba(0,0,0,.45)}
+  .item{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:44px;transform:translateY(110%);transition:transform .12s ease-out}
+  .hole.up .item{transform:translateY(0)}
+  .hole.hit .item{transform:translateY(0) scale(1.3);opacity:.4;transition:all .15s}
+  .hole:focus-visible{outline:3px solid var(--ink)}
+  .overlay{position:fixed;inset:0;background:linear-gradient(160deg,#ffc72c,#ff7a1a);color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    text-align:center;padding:24px}
+  .overlay.hidden{display:none}
+  .overlay h2{margin:0;font-size:32px;font-weight:900}
+  .overlay p{margin:0;max-width:300px;line-height:1.5;font-weight:bold}
+  button.play{background:var(--ink);color:var(--sun);border:0;border-radius:999px;
+    font-size:20px;font-weight:bold;padding:14px 40px;margin-top:8px;box-shadow:0 4px 0 rgba(0,0,0,.3)}
+  button.play:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+  button.play:disabled{opacity:.5}
+  .big{font-size:64px;color:var(--ink);font-weight:900}
+
+  .login{z-index:10}
+  .login form{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px}
+  .login input{font-size:18px;padding:14px 16px;border-radius:14px;border:3px solid transparent;
+    background:#fff;color:var(--ink);font-family:inherit}
+  .login input::placeholder{color:#8a6a50}
+  .login input:focus{outline:none;border-color:var(--ink)}
+  .err{min-height:20px;color:#6e0b0b;font-weight:bold;font-size:14px;margin:0}
+  .link{background:none;border:0;color:var(--ink);text-decoration:underline;font-weight:bold;
+    font-size:15px;padding:6px;font-family:inherit}
+  .who{display:flex;align-items:center;gap:10px;margin:0;font-size:14px;font-weight:bold}
+  .who button{background:none;border:2px solid var(--ink);color:var(--ink);border-radius:999px;
+    padding:3px 12px;font-size:13px;font-weight:bold;font-family:inherit}
+  .hole.win{border-color:#fff;background:#b8581a;box-shadow:0 0 0 4px var(--ink)}
+  .ttt{background:var(--ink);color:var(--cream);border-radius:16px;padding:12px 14px;
+    display:flex;flex-direction:column;gap:10px;text-align:center;box-shadow:0 4px 0 rgba(58,28,8,.25)}
+  .ttt p{margin:0;font-weight:bold;line-height:1.4;font-size:15px}
+  .row{display:flex;gap:10px;justify-content:center}
+  button.small{font-size:16px;padding:10px 20px;margin-top:0}
+  button.alt{background:var(--cream);color:var(--ink);border:3px solid var(--ink)}
+  .ttt button.play:not(.alt){background:var(--sun);color:var(--ink)}
+  .result{position:fixed;inset:0;z-index:15;background:rgba(58,28,8,.62);display:flex;
+    align-items:center;justify-content:center;padding:20px}
+  .result.hidden{display:none}
+  .result .card{background:var(--cream);color:var(--ink);border-radius:26px;padding:24px 20px;
+    width:min(88vw,340px);text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;
+    box-shadow:0 8px 0 rgba(0,0,0,.25);animation:pop .35s ease-out}
+  .result h2{margin:0;font-size:26px;font-weight:900}
+  .result p{margin:0;line-height:1.5;font-weight:bold;font-size:15px}
+  .rEmoji{font-size:64px;line-height:1}
+  .gift{font-size:72px;line-height:1;background:none;border:0;padding:4px;animation:wob 1s ease-in-out infinite}
+  .gift.open{animation:none}
+  .gift:focus-visible{outline:3px solid var(--ink);border-radius:16px}
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:16;overflow:hidden}
+  .confetti span{position:absolute;top:-40px;font-size:26px;animation:fall 2.6s linear forwards}
+  @keyframes fall{to{transform:translateY(112vh) rotate(360deg)}}
+  @keyframes wob{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg) scale(1.08)}}
+  @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+  @media (prefers-reduced-motion:reduce){.gift,.result .card{animation:none}.confetti{display:none}}
+  .snd{position:fixed;top:12px;right:12px;z-index:20;width:46px;height:46px;border-radius:50%;
+    border:3px solid var(--ink);background:var(--cream);font-size:22px;line-height:1;padding:0}
+  .snd:active{transform:scale(.92)}
+  .snd:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){.item{transition:none}}
+
+  .qrCanvas{width:min(70vw,260px);height:min(70vw,260px);background:#fff;border-radius:12px;image-rendering:pixelated;padding:8px;box-sizing:border-box}
+  .scanVid{width:min(76vw,290px);height:min(76vw,290px);object-fit:cover;background:#000;border-radius:16px;border:4px solid var(--ink)}
+  .urlTxt{word-break:break-all;font-size:13px!important;opacity:.85}
+  .menuRow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .menuRow button{background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:999px;
+    font-weight:bold;font-size:15px;padding:8px 16px;font-family:inherit}
+</style>
+</head>
+<body>
+<button class="snd" id="soundBtn" type="button" aria-label="Sound on/off">🔊</button>
+<main>
+  <div>
+    <h1>Maangai Tap</h1>
+    <p class="sub">🥭 mangoes tap pannunga. 🌶️ thottaa points poidum!</p>
+    <p class="who" id="who" style="display:none"><span id="whoName"></span><button class="logout" type="button">Logout</button></p>
+  </div>
+  <div class="bar" id="rushBar">
+    <span>Score <b id="score">0</b></span>
+    <span>Time <b id="time">30</b></span>
+    <span>Best <b id="best">0</b></span>
+  </div>
+  <div class="bar" id="tttBar" style="display:none">
+    <span>Wins <b id="tWins">0</b></span>
+    <span>Draws <b id="tDraws">0</b></span>
+    <span>Losses <b id="tLoss">0</b></span>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="ttt" id="tttPanel" style="display:none">
+    <p id="tttMsg"></p>
+    <div class="row">
+      <button class="play small" id="tttAgain" type="button" style="display:none">Marubadiyum</button>
+      <button class="play alt small" id="tttMenu" type="button">Menu</button>
+    </div>
+  </div>
+</main>
+
+<div class="result hidden" id="resultBox" role="dialog" aria-live="polite">
+  <div class="card">
+    <div class="rEmoji" id="rEmoji"></div>
+    <h2 id="rTitle"></h2>
+    <p id="rText"></p>
+    <button class="gift" id="giftBtn" type="button" aria-label="Gift open pannunga">🎁</button>
+    <div class="row">
+      <button class="play small" id="rAgain" type="button">Marubadiyum</button>
+      <button class="play alt small" id="rMenu" type="button">Menu</button>
+    </div>
+  </div>
+</div>
+<div class="confetti" id="confetti"></div>
+
+<div class="result hidden" id="qrBox" style="z-index:20" role="dialog">
+  <div class="card">
+    <h2>📲 Friend-ku share</h2>
+    <p>Friend phone camera-la indha QR-a scan pannattum.</p>
+    <canvas class="qrCanvas" id="qrCanvas" width="330" height="330"></canvas>
+    <p class="urlTxt" id="qrUrl"></p>
+    <div class="row">
+      <button class="play small" id="qrShare" type="button">Share</button>
+      <button class="play alt small" id="qrCopy" type="button">Copy</button>
+    </div>
+    <button class="link" id="qrClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="result hidden" id="scanBox" style="z-index:20" role="dialog">
+  <div class="card">
+    <h2>📷 QR Scan</h2>
+    <video class="scanVid" id="scanVid" playsinline muted></video>
+    <p id="scanMsg">QR-a camera munnaadi pidinga.</p>
+    <div class="row">
+      <button class="play small" id="scanOpenLink" type="button" style="display:none">Open</button>
+    </div>
+    <button class="link" id="scanClose" type="button">Close</button>
+  </div>
+</div>
+
+
+<div class="overlay login" id="loginScreen">
+  <div class="big" style="font-size:48px">🥭</div>
+  <h2 id="loginTitle">Login</h2>
+  <form id="loginForm">
+    <input id="uName" type="text" placeholder="Player name" maxlength="16" autocapitalize="none" autocomplete="username" required>
+    <input id="uPin" type="password" placeholder="Password (6+ characters)" minlength="6" maxlength="40" autocomplete="current-password" required>
+    <p class="err" id="loginErr" role="alert"></p>
+    <button class="play" id="loginBtn" type="submit" style="margin-top:0">Login</button>
+  </form>
+  <button class="link" id="switchBtn" type="button">Puthu player-a? Register pannunga</button>
+  <button class="link" id="guestBtn" type="button">Login illaama vilaiyaadu (Guest)</button>
+  <div class="menuRow"><button type="button" class="qrOpen">📲 QR / Share</button><button type="button" class="scanOpen">📷 QR Scan</button></div>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <h2 id="ovTitle">Maangai Tap</h2>
+  <div class="big" id="ovScore" style="display:none"></div>
+  <p id="ovText">30 seconds-la mudinja alavu mangoes (🥭 +1, 🌟 +3) pidinga. Chilli (🌶️) -2 points.</p>
+  <button class="play" id="playBtn">Maangai Rush</button>
+  <button class="play alt" id="tttBtn" type="button" style="margin-top:0">🥭 vs 🌶️ Tic-Tac-Toe</button>
+  <button class="play alt" id="ttt2Btn" type="button" style="margin-top:0">👫 Friend-oda vilaiyaadu</button>
+  <div class="menuRow"><button type="button" class="qrOpen">📲 QR / Share</button><button type="button" class="scanOpen">📷 QR Scan</button></div>
+  <button class="link logout" type="button">Logout</button>
+</div>
+
+<script>
+const grid = document.getElementById('grid');
+const scoreEl = document.getElementById('score');
+const timeEl = document.getElementById('time');
+const bestEl = document.getElementById('best');
+const overlay = document.getElementById('overlay');
+let holes = [], score = 0, best = 0, timeLeft = 30;
+let running = false, tickTimer, popTimer;
+
+/* ---------- Sound (Web Audio, no files) ---------- */
+let audioCtx = null, soundOn = true;
+function ac() {
+  if (!audioCtx) { const C = window.AudioContext || window.webkitAudioContext; if (C) audioCtx = new C(); }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, delay, dur, type, vol, endFreq) {
+  if (!soundOn) return;
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + delay;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+const sfx = {
+  mango:  () => tone(600, 0, 0.12, 'sine', 0.25, 900),
+  gold:   () => [784, 988, 1318].forEach((f, i) => tone(f, i * 0.07, 0.18, 'triangle', 0.22)),
+  chilli: () => tone(180, 0, 0.3, 'sawtooth', 0.2, 70),
+  start:  () => [523, 659, 784].forEach((f, i) => tone(f, i * 0.09, 0.15, 'square', 0.12)),
+  tick:   () => tone(900, 0, 0.05, 'square', 0.08),
+  end:    () => [784, 659, 523, 392].forEach((f, i) => tone(f, i * 0.14, 0.25, 'triangle', 0.22))
+};
+let urgentTimer = null, tickFlip = false;
+function startUrgent() {
+  if (urgentTimer) return;
+  urgentTimer = setInterval(() => {
+    tickFlip = !tickFlip;
+    tone(tickFlip ? 1000 : 780, 0, 0.05, 'square', 0.09);
+  }, 250);
+}
+function stopUrgent() { clearInterval(urgentTimer); urgentTimer = null; }
+/* ---------- Voice (Web Speech API, phone voice) ---------- */
+const synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
+if (synth) { synth.getVoices(); synth.addEventListener && synth.addEventListener('voiceschanged', () => synth.getVoices()); }
+function speak(tamil, english, pitch) {
+  if (!soundOn || !synth || typeof SpeechSynthesisUtterance === 'undefined') return;
+  try {
+    synth.cancel();
+    const ta = synth.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith('ta'));
+    const u = new SpeechSynthesisUtterance(ta ? tamil : english);
+    if (ta) { u.voice = ta; u.lang = ta.lang; } else { u.lang = 'en-IN'; }
+    u.pitch = pitch || 1; u.rate = 1;
+    synth.speak(u);
+  } catch (e) { console.error(e); }
+}
+function stopSpeech() { if (synth) { try { synth.cancel(); } catch (e) {} } }
+
+document.getElementById('soundBtn').addEventListener('click', e => {
+  soundOn = !soundOn;
+  e.currentTarget.textContent = soundOn ? '🔊' : '🔇';
+  if (!soundOn) stopSpeech();
+  if (soundOn) sfx.mango();
+});
+
+for (let i = 0; i < 9; i++) {
+  const h = document.createElement('button');
+  h.className = 'hole';
+  h.setAttribute('aria-label', 'Hole ' + (i + 1));
+  h.innerHTML = '<div class="item"></div>';
+  h.addEventListener('pointerdown', e => { e.preventDefault(); if (mode === 'ttt') tttTap(holes.indexOf(h)); else whack(h); });
+  grid.appendChild(h);
+  holes.push(h);
+}
+
+function pickType() {
+  const r = Math.random();
+  if (r < 0.2) return { e: '🌶️', p: -2 };
+  if (r < 0.3) return { e: '🌟', p: 3 };
+  return { e: '🥭', p: 1 };
+}
+
+function pop() {
+  if (!running) return;
+  const free = holes.filter(h => !h.classList.contains('up'));
+  if (free.length) {
+    const h = free[Math.floor(Math.random() * free.length)];
+    const t = pickType();
+    h.dataset.p = t.p;
+    h.firstChild.textContent = t.e;
+    h.classList.remove('hit');
+    h.classList.add('up');
+    const stay = Math.max(450, 1000 - (30 - timeLeft) * 18);
+    setTimeout(() => h.classList.remove('up'), stay);
+  }
+  const gap = Math.max(260, 650 - (30 - timeLeft) * 13);
+  popTimer = setTimeout(pop, gap);
+}
+
+function whack(h) {
+  if (!running || !h.classList.contains('up')) return;
+  const pts = Number(h.dataset.p);
+  if (pts < 0) sfx.chilli(); else if (pts >= 3) sfx.gold(); else sfx.mango();
+  score = Math.max(0, score + pts);
+  scoreEl.textContent = score;
+  h.classList.add('hit');
+  h.classList.remove('up');
+  if (navigator.vibrate) navigator.vibrate(h.dataset.p < 0 ? 80 : 15);
+}
+
+function start() {
+  exitTTT();
+  score = 0; timeLeft = 30; running = true;
+  stopUrgent();
+  sfx.start();
+  scoreEl.textContent = 0; timeEl.textContent = 30;
+  overlay.classList.add('hidden');
+  holes.forEach(h => h.classList.remove('up', 'hit'));
+  tickTimer = setInterval(() => {
+    timeLeft--; timeEl.textContent = timeLeft;
+    if (timeLeft <= 0) end(); else if (timeLeft <= 5) startUrgent();
+  }, 1000);
+  pop();
+}
+
+function end() {
+  running = false;
+  clearInterval(tickTimer); clearTimeout(popTimer);
+  holes.forEach(h => h.classList.remove('up'));
+  stopUrgent();
+  sfx.end();
+  speak('நேரம் முடிந்தது. உங்கள் மதிப்பெண் ' + score, 'Time over. Your score is ' + score);
+  const newBest = score > best;
+  if (newBest) { best = score; bestEl.textContent = best; if (window.saveBest) window.saveBest(best); }
+  document.getElementById('ovTitle').textContent = newBest && score > 0 ? 'Puthu best!' : 'Time over';
+  const s = document.getElementById('ovScore');
+  s.style.display = 'block'; s.textContent = score;
+  document.getElementById('ovText').textContent = newBest && score > 0
+    ? 'Super! Ippo unga best score idhu.'
+    : 'Innum oru thadavai try pannunga, best beat pannidalaam.';
+  document.getElementById('playBtn').textContent = 'Play again';
+  overlay.classList.remove('hidden');
+}
+
+
+/* ---------- Tic-Tac-Toe: 🥭 (you) vs 🌶️ (computer) ---------- */
+let mode = 'rush', board = Array(9).fill(null), tttOver = false, tttLock = false, cTimer = null;
+const tStats = { w: 0, d: 0, l: 0 };
+let vs2 = false, turn = 'M', lastStarter = 'C';   // vs2 = friend-oda (same phone)
+const turnMsg = () => (turn === 'M' ? 'Player 1 🥭' : 'Player 2 🌶️') + ' vaaippu. Oru kattam tap pannunga!';
+const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const winLine = (b, who) => LINES.find(l => l.every(i => b[i] === who)) || null;
+
+function setCell(i, who) {
+  board[i] = who;
+  const h = holes[i];
+  h.firstChild.textContent = who === 'M' ? '🥭' : '🌶️';
+  h.classList.remove('hit');
+  h.classList.add('up');
+}
+function exitTTT() {
+  mode = 'rush'; clearTimeout(cTimer); hideResult();
+  document.getElementById('tttBar').style.display = 'none';
+  document.getElementById('tttPanel').style.display = 'none';
+  document.getElementById('rushBar').style.display = 'flex';
+  if (!running) holes.forEach(h => h.classList.remove('up', 'hit', 'win'));
+}
+function startTTT() {
+  running = false; clearInterval(tickTimer); clearTimeout(popTimer); stopUrgent(); clearTimeout(cTimer);
+  hideResult();
+  mode = 'ttt'; board.fill(null); tttOver = false; tttLock = false;
+  holes.forEach(h => h.classList.remove('up', 'hit', 'win'));
+  overlay.classList.add('hidden');
+  document.getElementById('rushBar').style.display = 'none';
+  document.getElementById('tttBar').style.display = vs2 ? 'none' : 'flex';
+  document.getElementById('tttPanel').style.display = 'flex';
+  document.getElementById('tttAgain').style.display = 'none';
+  if (vs2) { turn = lastStarter === 'M' ? 'C' : 'M'; lastStarter = turn; document.getElementById('tttMsg').textContent = turnMsg(); }
+  else document.getElementById('tttMsg').textContent = 'Neenga 🥭. Oru kattam tap pannunga. 3 mango oru line-la vandha neenga win!';
+  sfx.start();
+}
+function findWinCell(who) {
+  for (const l of LINES) {
+    const v = l.map(i => board[i]);
+    if (v.filter(x => x === who).length === 2 && v.includes(null)) return l[v.indexOf(null)];
+  }
+  return -1;
+}
+function pickC() {
+  const empty = board.map((v, i) => v ? -1 : i).filter(i => i >= 0);
+  let m = findWinCell('C'); if (m >= 0 && Math.random() < 0.9) return m;
+  m = findWinCell('M');     if (m >= 0 && Math.random() < 0.75) return m;
+  return empty[Math.floor(Math.random() * empty.length)];
+}
+function finishTTT(res, line) {
+  tttOver = true;
+  if (line) line.forEach(i => holes[i].classList.add('win'));
+  const msg = document.getElementById('tttMsg');
+  if (vs2) {
+    if (res === 'D') { msg.textContent = 'Draw! Yaarum jeikkala.'; sfx.tick(); }
+    else {
+      msg.textContent = '🎉 ' + (res === 'M' ? 'Player 1 🥭' : 'Player 2 🌶️') + ' jeichaar!';
+      sfx.end(); if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
+    }
+  } else {
+    if (res === 'M') {
+      tStats.w++; msg.textContent = '🎉 Neenga jeichitteenga! 3 mango oru line-la!';
+      sfx.end(); if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
+    } else if (res === 'C') {
+      tStats.l++; msg.textContent = '🌶️ chilli jeichiduchu. Marubadiyum try pannunga!';
+      sfx.chilli(); if (navigator.vibrate) navigator.vibrate(120);
+    } else {
+      tStats.d++; msg.textContent = 'Draw! Yaarum jeikkala.';
+      sfx.tick();
+    }
+    document.getElementById('tWins').textContent = tStats.w;
+    document.getElementById('tDraws').textContent = tStats.d;
+    document.getElementById('tLoss').textContent = tStats.l;
+  }
+  document.getElementById('tttAgain').style.display = '';
+  clearTimeout(resultTimer);
+  resultTimer = setTimeout(() => showResult(res), 900);
+}
+function tttTap(i) {
+  if (tttOver || tttLock || board[i]) return;
+  if (vs2) {
+    setCell(i, turn); if (turn === 'M') sfx.mango(); else sfx.chilli();
+    const w2 = winLine(board, turn);
+    if (w2) return finishTTT(turn, w2);
+    if (board.every(Boolean)) return finishTTT('D');
+    turn = turn === 'M' ? 'C' : 'M';
+    document.getElementById('tttMsg').textContent = turnMsg();
+    return;
+  }
+  setCell(i, 'M'); sfx.mango();
+  const w = winLine(board, 'M');
+  if (w) return finishTTT('M', w);
+  if (board.every(Boolean)) return finishTTT('D');
+  tttLock = true;
+  document.getElementById('tttMsg').textContent = '🌶️ yosikkudhu...';
+  cTimer = setTimeout(() => {
+    setCell(pickC(), 'C'); sfx.chilli(); tttLock = false;
+    const cw = winLine(board, 'C');
+    if (cw) return finishTTT('C', cw);
+    if (board.every(Boolean)) return finishTTT('D');
+    document.getElementById('tttMsg').textContent = 'Ungal vaaippu 🥭';
+  }, 550);
+}
+
+/* ---------- Result popup: win gift / chilli wins ---------- */
+let resultTimer = null, giftOpened = false;
+const GIFTS = [['🍯', 'Mango lassi treat'], ['🏅', 'Golden Mango badge'], ['👑', 'Mango King crown'],
+               ['🎟️', 'Free extra round'], ['⭐', 'Super star sticker']];
+function confetti(list) {
+  const box = document.getElementById('confetti');
+  for (let i = 0; i < 26; i++) {
+    const sp = document.createElement('span');
+    sp.textContent = list[i % list.length];
+    sp.style.left = Math.random() * 100 + '%';
+    sp.style.animationDelay = Math.random() * 0.6 + 's';
+    box.appendChild(sp);
+  }
+  setTimeout(() => { box.innerHTML = ''; }, 3600);
+}
+function hideResult() {
+  clearTimeout(resultTimer); stopSpeech();
+  document.getElementById('resultBox').classList.add('hidden');
+  document.getElementById('confetti').innerHTML = '';
+}
+function showResult(res) {
+  const g = document.getElementById('giftBtn');
+  giftOpened = false; g.classList.remove('open'); g.textContent = '🎁';
+  if (vs2 && res !== 'D') {
+    const p1 = res === 'M';
+    document.getElementById('rEmoji').textContent = '🏆';
+    document.getElementById('rTitle').textContent = (p1 ? 'Player 1 🥭' : 'Player 2 🌶️') + ' wins! 🎉';
+    document.getElementById('rText').textContent = 'Vaazhthukkal! 3 oru line-la. Winner-ku oru gift irukku, 🎁-a tap pannunga!';
+    g.style.display = '';
+    confetti(['🥭', '🌶️', '🎉', '⭐']);
+    speak(p1 ? 'முதல் வீரர் ஜெயிச்சிட்டாங்க! வாழ்த்துகள்!' : 'இரண்டாவது வீரர் ஜெயிச்சிட்டாங்க! வாழ்த்துகள்!', (p1 ? 'Player one' : 'Player two') + ' wins! Congratulations!', 1.2);
+  } else if (res === 'M') {
+    document.getElementById('rEmoji').textContent = '🏆';
+    document.getElementById('rTitle').textContent = 'You win! 🎉';
+    document.getElementById('rText').textContent = 'Neenga jeichitteenga! 3 mango oru line-la. Ungalukku oru gift irukku, 🎁-a tap pannunga!';
+    g.style.display = '';
+    confetti(['🥭', '🎉', '⭐', '🎊']);
+    speak('நீங்க ஜெயிச்சிட்டீங்க! வாழ்த்துகள்!', 'You win! Congratulations!', 1.2);
+  } else if (res === 'C') {
+    document.getElementById('rEmoji').textContent = '🌶️';
+    document.getElementById('rTitle').textContent = 'Chilli wins! 😎';
+    document.getElementById('rText').textContent = 'Naan jeichuten! Ungal 3 mango oru line-la varala. Marubadiyum try pannunga, naan ready!';
+    g.style.display = 'none';
+    speak('நான் ஜெயிச்சுட்டேன்! மிளகாய் ஜெயிச்சது!', 'I won! Chilli wins! Try again!', 0.6);
+  } else {
+    document.getElementById('rEmoji').textContent = '🤝';
+    document.getElementById('rTitle').textContent = 'Draw!';
+    document.getElementById('rText').textContent = 'Yaarum jeikkala. Innoru round vilaiyaadalaama?';
+    g.style.display = 'none';
+    speak('சமன்! யாரும் ஜெயிக்கல.', 'It is a draw!', 1);
+  }
+  document.getElementById('resultBox').classList.remove('hidden');
+}
+document.getElementById('giftBtn').addEventListener('click', e => {
+  if (giftOpened) return;
+  giftOpened = true;
+  const [emo, name] = GIFTS[Math.floor(Math.random() * GIFTS.length)];
+  e.currentTarget.textContent = emo; e.currentTarget.classList.add('open');
+  document.getElementById('rText').textContent = 'Ungal gift: ' + name + '! 🎊 (Idhu virtual gift)';
+  sfx.gold(); confetti(['🎁', '🥭', '✨']);
+  speak('உங்க பரிசு: ' + name, 'You got a ' + name + '!', 1.2);
+});
+document.getElementById('resultBox').addEventListener('click', e => {
+  if (e.target.id === 'resultBox') hideResult();   // backdrop tap: board paakka
+});
+document.getElementById('rAgain').addEventListener('click', () => startTTT());
+document.getElementById('rMenu').addEventListener('click', () => { hideResult(); document.getElementById('tttMenu').click(); });
+document.getElementById('tttBtn').addEventListener('click', () => { vs2 = false; startTTT(); });
+document.getElementById('ttt2Btn').addEventListener('click', () => { vs2 = true; lastStarter = 'C'; startTTT(); });
+document.getElementById('tttAgain').addEventListener('click', startTTT);
+document.getElementById('tttMenu').addEventListener('click', () => {
+  exitTTT();
+  document.getElementById('ovTitle').textContent = 'Maangai Tap';
+  document.getElementById('ovScore').style.display = 'none';
+  document.getElementById('ovText').textContent = 'Rush: 30 seconds-la mangoes pidinga. Tic-Tac-Toe: computer-oda illa friend-oda vilaiyaadalaam!';
+  document.getElementById('playBtn').textContent = 'Maangai Rush';
+  overlay.classList.remove('hidden');
+});
+document.getElementById('playBtn').addEventListener('click', start);
+
+</script>
+
+<script type="module">
+let initializeApp, getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
+    signInWithEmailAndPassword, signOut, getFirestore, doc, getDoc, setDoc;
+let libsOk = true;
+
+/* ====== INGA UNGA FIREBASE CONFIG PASTE PANNUNGA ====== */
+const firebaseConfig = {
+  apiKey: "PASTE_API_KEY",
+  authDomain: "PASTE_PROJECT.firebaseapp.com",
+  projectId: "PASTE_PROJECT_ID",
+  appId: "PASTE_APP_ID"
+};
+/* ======================================================= */
+
+/* Config paste pannala-na Firebase load pannadhu; slow network-la Guest button block aagaadhu */
+if (firebaseConfig.apiKey.startsWith("PASTE")) {
+  libsOk = false;
+} else {
+  try {
+    const V = "https://www.gstatic.com/firebasejs/10.12.2/";
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("firebase load timeout")), 5000));
+    const [a, b, c] = await Promise.race([
+      Promise.all([import(V + "firebase-app.js"), import(V + "firebase-auth.js"), import(V + "firebase-firestore.js")]),
+      timeout
+    ]);
+    ({ initializeApp } = a);
+    ({ getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } = b);
+    ({ getFirestore, doc, getDoc, setDoc } = c);
+  } catch (e) { libsOk = false; console.error(e); }
+}
+
+const $ = id => document.getElementById(id);
+const configured = libsOk && !firebaseConfig.apiKey.startsWith("PASTE");
+let app, auth, db;
+let registerMode = false, registering = false, uid = null, playerName = "";
+
+function setMode(reg) {
+  registerMode = reg;
+  $('loginTitle').textContent = reg ? 'Register' : 'Login';
+  $('loginBtn').textContent = reg ? 'Create account' : 'Login';
+  $('switchBtn').textContent = reg ? 'Already player-a? Login pannunga' : 'Puthu player-a? Register pannunga';
+  $('uPin').autocomplete = reg ? 'new-password' : 'current-password';
+  $('loginErr').textContent = '';
+}
+$('switchBtn').addEventListener('click', () => setMode(!registerMode));
+
+function showLogin() {
+  uid = null; playerName = "";
+  running = false;
+  clearInterval(tickTimer); clearTimeout(popTimer); stopUrgent(); exitTTT();
+  holes.forEach(h => h.classList.remove('up', 'hit', 'win'));
+  best = 0; scoreEl.textContent = 0; timeEl.textContent = 30; bestEl.textContent = 0;
+  $('who').style.display = 'none';
+  overlay.classList.add('hidden');
+  $('uName').value = ''; $('uPin').value = '';
+  setMode(false);
+  $('loginScreen').classList.remove('hidden');
+}
+
+async function enter(user) {
+  uid = user.uid;
+  let data = null;
+  try {
+    const snap = await getDoc(doc(db, 'players', uid));
+    if (snap.exists()) data = snap.data();
+  } catch (e) { console.error(e); }
+  playerName = (data && data.name) || user.email.split('@')[0];
+  best = (data && data.best) || 0;
+  bestEl.textContent = best;
+  $('whoName').textContent = '👤 ' + playerName;
+  $('who').style.display = 'flex';
+  $('uPin').value = '';
+  $('loginErr').textContent = '';
+  $('loginScreen').classList.add('hidden');
+  $('ovTitle').textContent = 'Hi ' + playerName + '!';
+  $('ovScore').style.display = 'none';
+  $('ovText').textContent = 'Rush: 30 seconds-la mangoes pidinga. Tic-Tac-Toe: 3 mango oru line-la serthaa neenga win!';
+  $('playBtn').textContent = 'Maangai Rush';
+  overlay.classList.remove('hidden');
+}
+
+window.saveBest = b => {
+  if (!uid) return;
+  setDoc(doc(db, 'players', uid), { name: playerName, best: b }).catch(e => console.error(e));
+};
+
+const messages = {
+  'auth/email-already-in-use': 'Indha name already irukku. Vera name try pannunga.',
+  'auth/invalid-credential': 'Name illa password thappu. Marubadiyum try pannunga.',
+  'auth/user-not-found': 'Indha player illa. Register pannunga.',
+  'auth/wrong-password': 'Password thappu. Marubadiyum try pannunga.',
+  'auth/weak-password': 'Password kuraivaa 6 characters irukkanum.',
+  'auth/too-many-requests': 'Romba thadavai try pannitteenga. Konjam neram kazhichu paarunga.',
+  'auth/network-request-failed': 'Internet connection check pannunga.'
+};
+
+if (!configured) {
+  $('loginErr').textContent = libsOk
+    ? 'Firebase config innum paste pannala. File-la firebaseConfig-a nirappunga.'
+    : 'Internet connection check pannunga. Login ippo load aagala.';
+  $('loginBtn').disabled = true;
+} else {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  onAuthStateChanged(auth, user => {
+    if (registering) return;
+    if (user) enter(user); else showLogin();
+  });
+}
+
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!configured) return;
+  const name = $('uName').value.trim();
+  const pw = $('uPin').value;
+  const err = $('loginErr');
+  if (!/^[A-Za-z0-9_]{3,16}$/.test(name)) { err.textContent = 'Name 3-16 letters, numbers, _ mattum.'; return; }
+  if (pw.length < 6) { err.textContent = 'Password kuraivaa 6 characters irukkanum.'; return; }
+  const email = name.toLowerCase() + '@maangaitap.app';
+  $('loginBtn').disabled = true; err.textContent = '';
+  try {
+    if (registerMode) {
+      registering = true;
+      const cred = await createUserWithEmailAndPassword(auth, email, pw);
+      await setDoc(doc(db, 'players', cred.user.uid), { name, best: 0 });
+      registering = false;
+      await enter(cred.user);
+    } else {
+      await signInWithEmailAndPassword(auth, email, pw);
+    }
+  } catch (ex) {
+    registering = false;
+    err.textContent = messages[ex.code] || 'Edho thappu aachu. Marubadiyum try pannunga.';
+    console.error(ex);
+  } finally {
+    $('loginBtn').disabled = false;
+  }
+});
+
+let guest = false;
+$('guestBtn').addEventListener('click', () => {
+  guest = true; uid = null; playerName = 'Guest';
+  best = 0; bestEl.textContent = 0;
+  $('whoName').textContent = '👤 Guest';
+  $('who').style.display = 'flex';
+  $('loginScreen').classList.add('hidden');
+  $('ovTitle').textContent = 'Hi Guest!';
+  $('ovScore').style.display = 'none';
+  $('ovText').textContent = 'Rush: 30 seconds-la mangoes pidinga. Tic-Tac-Toe: 3 mango oru line-la serthaa neenga win! Guest score save aagaadhu.';
+  $('playBtn').textContent = 'Maangai Rush';
+  overlay.classList.remove('hidden');
+});
+document.querySelectorAll('.logout').forEach(b => b.addEventListener('click', () => {
+  if (guest || !configured) { guest = false; showLogin(); }
+  else signOut(auth);
+}));
+</script>
+
+<script>
+/* QR show + QR scan (separate from Firebase module, so it works even on slow network) */
+(function(){
+  var g=function(i){return document.getElementById(i)};
+  var GAME_URL="https://kalaiyarasier2008-collab.github.io/mango_-tap/";
+  var N=33, M="111111100110010010010111001111111100000100001111100100100001000001101110101101110110110110101011101101110101011101011101011101011101101110101101110100111001001011101100000101010001111101100001000001111111101010101010101010101111111000000001110000100100110000000000101111100110011101101011101111100010111010111100011011001001101101011000111000000111001010000010110000001011001001010001100101011101011011110011100000100010100111011110001000101111110111101001001111000100100101000000100100011001010000111001100000010101111011001100110101110110011001100011110110001000111011011001011011111001101101101101110111111111001010111110100010101000011101001100110001111101111100100100111110011011110011000111100000000101100111101101000001101001111101010110101000001101110100001010000010100101101011111101100111101110110101110011111111010000000001111100010011000100010101111111100111000110101011101010110100000101010010110010111100011110101110101011110000100110111111000101110101010111111010111110011111101110101000100000101100101100100100000100001001010111110001011100111111101101001001111011110100010";
+  var qrBox=g('qrBox'), scanBox=g('scanBox');
+
+  function drawQR(){
+    var c=g('qrCanvas'), x=c.getContext('2d'), q=4, px=Math.floor(c.width/(N+2*q));
+    var off=Math.floor((c.width-px*N)/2);
+    x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.fillStyle='#000';
+    for(var r=0;r<N;r++)for(var k=0;k<N;k++) if(M.charAt(r*N+k)==='1') x.fillRect(off+k*px,off+r*px,px,px);
+  }
+  function openQR(){ drawQR(); g('qrUrl').textContent=GAME_URL; g('qrShare').style.display=navigator.share?'':'none'; qrBox.classList.remove('hidden'); }
+  g('qrClose').addEventListener('click',function(){qrBox.classList.add('hidden')});
+  g('qrCopy').addEventListener('click',function(){
+    var b=g('qrCopy');
+    function done(){b.textContent='Copied ✅'; setTimeout(function(){b.textContent='Copy'},1500)}
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(GAME_URL).then(done,function(){g('qrUrl').textContent=GAME_URL});
+    else done();
+  });
+  g('qrShare').addEventListener('click',function(){
+    if(navigator.share) navigator.share({title:'Maangai Tap',text:'Maangai Tap game vilayaadunga! 🥭',url:GAME_URL}).catch(function(){});
+  });
+
+  var stream=null, timer=null, det=null, found=null;
+  function stopCam(){
+    if(timer){clearInterval(timer);timer=null}
+    if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
+    g('scanVid').srcObject=null;
+  }
+  function closeScan(){stopCam();scanBox.classList.add('hidden')}
+  function msg(t){g('scanMsg').textContent=t}
+  function openScan(){
+    found=null; g('scanOpenLink').style.display='none'; g('scanVid').style.display='';
+    scanBox.classList.remove('hidden'); msg('Camera start aagudhu...');
+    if(!('BarcodeDetector' in window)){ g('scanVid').style.display='none';
+      msg('Indha phone/browser-la in-game scanner support illa. Phone-oda Camera app (or Google Lens) la scan pannunga.'); return; }
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ g('scanVid').style.display='none'; msg('Camera use panna mudiyala.'); return; }
+    try{ det=new BarcodeDetector({formats:['qr_code']}); }catch(e){ g('scanVid').style.display='none'; msg('Indha phone-la QR scanner support illa. Camera app-la scan pannunga.'); return; }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}).then(function(s){
+      stream=s; var v=g('scanVid'); v.srcObject=s; v.play().catch(function(){});
+      msg('QR-a camera munnaadi pidinga.');
+      timer=setInterval(function(){
+        if(v.readyState<2) return;
+        det.detect(v).then(function(list){
+          if(!list.length) return;
+          var val=list[0].rawValue||''; stopCam(); found=val;
+          if(/^https?:\/\//i.test(val)){ msg('QR kidaichudhu: '+val); g('scanOpenLink').style.display=''; }
+          else msg('QR kidaichudhu: '+val);
+        }).catch(function(){});
+      },300);
+    }).catch(function(){ g('scanVid').style.display='none'; msg('Camera permission kudunga (Allow). Illana Camera app-la scan pannunga.'); });
+  }
+  g('scanClose').addEventListener('click',closeScan);
+  g('scanOpenLink').addEventListener('click',function(){ if(found&&/^https?:\/\//i.test(found)) window.location.href=found; });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.qrOpen'),function(b){b.addEventListener('click',openQR)});
+  Array.prototype.forEach.call(document.querySelectorAll('.scanOpen'),function(b){b.addEventListener('click',openScan)});
+})();
+</script>
+</body>
+</html>
